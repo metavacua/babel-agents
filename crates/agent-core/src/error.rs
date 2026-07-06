@@ -3,6 +3,7 @@
 //! framework's `ToolCall`/`ToolError` pattern — `Capability` is this
 //! design's `ToolCall`, `AgentError` is its `ToolError`).
 
+use alloc::string::String;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -19,6 +20,10 @@ pub enum Request {
 /// Exhaustive ADT for agent-level failures (chassis design §5's
 /// `ToolCall`/`ToolError` pattern, carried up one layer). Adding a failure
 /// mode requires adding a variant here — no catch-all.
+///
+/// `thiserror` with `default-features = false` (workspace `Cargo.toml`)
+/// targets `core::error::Error` instead of `std::error::Error`, so the
+/// derive is `no_std`-compatible without a hand-rolled `Display` impl.
 #[derive(Debug, Clone, PartialEq, Error)]
 pub enum AgentError {
     /// The request was outside the agent's granted `Vec<Capability>`. The

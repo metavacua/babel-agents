@@ -5,7 +5,10 @@
 //! check is what actually holds even if an agent's output tries to request
 //! something outside its grant (design §6).
 
-use std::marker::PhantomData;
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 use crate::capability::Capability;
 use crate::error::{AgentError, Request};
@@ -112,9 +115,8 @@ mod tests {
     /// naive "any non-empty capability list allows everything" stub.
     #[test]
     fn execute_request_denies_out_of_grant_shell_exec() {
-        let agent = AgentHandle::<GeneratorClass>::new(vec![Capability::FileRead(
-            "docs/**".to_string(),
-        )]);
+        let agent =
+            AgentHandle::<GeneratorClass>::new(vec![Capability::FileRead("docs/**".to_string())]);
         let request = Request::ShellExec("git push origin main".to_string());
 
         let result = execute_request(&agent, &request);
@@ -133,9 +135,8 @@ mod tests {
     /// *something* too).
     #[test]
     fn execute_request_allows_in_grant_file_read() {
-        let agent = AgentHandle::<GeneratorClass>::new(vec![Capability::FileRead(
-            "docs/**".to_string(),
-        )]);
+        let agent =
+            AgentHandle::<GeneratorClass>::new(vec![Capability::FileRead("docs/**".to_string())]);
         let request = Request::FileRead("docs/design.md".to_string());
 
         let result = execute_request(&agent, &request);

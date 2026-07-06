@@ -7,3 +7,14 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+agent-core = { path = "../agent-core" }
+wasmi = { workspace = true, optional = true }
+
+[features]
+# wasmi (pure-Rust interpreter, no Cranelift/native-codegen dependency —
+# preferred over wasmtime for this project) is the host-side runtime that
+# actually executes a candidate's wasm32v1-none build. It cannot itself
+# target wasm32v1-none, so it's off by default: `cargo build --target
+# wasm32v1-none` (this crate's own dispatch/ratchet logic) stays
+# gate-clean; native CI jobs enable it explicitly (see .github/workflows).
+runtime = ["dep:wasmi"]

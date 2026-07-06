@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Every crate's own logic must attempt to compile against wasm32v1-none
+  # (chassis design: content-generating and validator/committer/orchestrator
+  # dispatch logic are all no_std). Real host-side execution (wasmi) is a
+  # separate, gated concern — see the native-runtime job below.
+  wasm32v1-none:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate:
+          - agent-core
+          - agent-planner
+          - agent-generator
+          - agent-test-writer
+          - agent-validator-stage0
+          - agent-validator-stage1
+          - agent-validator-stage2
+          - agent-validator-stage3
+          - agent-committer
+          - agent-orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+          components: clippy, rustfmt
+      - name: fmt --check
+        run: cargo fmt --check
+      - name: build (wasm32v1-none)
+        run: cargo build -p ${{ matrix.crate }} --target wasm32v1-none
+      - name: clippy (wasm32v1-none)
+        run: cargo clippy -p ${{ matrix.crate }} --target wasm32v1-none -- -D warnings
+
+  # Native build + full test suite (doctests included) for every crate.
+  # #[cfg(test)] disables no_std for test builds, so this runs under std.
+  native-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate:
+          - agent-core
+          - agent-planner
+          - agent-generator
+          - agent-test-writer
+          - agent-validator-stage0
+          - agent-validator-stage1
+          - agent-validator-stage2
+          - agent-validator-stage3
+          - agent-committer
+          - agent-orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: clippy (native, all-targets)
+        run: cargo clippy -p ${{ matrix.crate }} --all-targets -- -D warnings
+      - name: test
+        run: cargo test -p ${{ matrix.crate }}
+
+  # agent-orchestrator's `runtime` feature (wasmi, the actual sandbox
+  # executor) only makes sense natively — wasmi itself cannot target
+  # wasm32v1-none. Gated, non-default, checked in its own job.
+  native-runtime-feature:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: clippy (agent-orchestrator, --features runtime)
+        run: cargo clippy -p agent-orchestrator --features runtime -- -D warnings
+      - name: test (agent-orchestrator, --features runtime)
+        run: cargo test -p agent-orchestrator --features runtime
+
+  workspace-sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - name: whole workspace builds against wasm32v1-none
+        run: cargo build --workspace --target wasm32v1-none
+      - name: whole workspace tests pass natively
+        run: cargo test --workspace
