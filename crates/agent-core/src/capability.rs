@@ -3,6 +3,7 @@
 //! requires editing this enum and every match site — the compiler enforces
 //! exhaustiveness (see the `compile_fail` doctest below).
 
+use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
 /// A single granted permission. Closed/exhaustive by design (chassis design
@@ -30,15 +31,9 @@ impl Capability {
     pub fn allows(&self, request: &crate::error::Request) -> bool {
         use crate::error::Request;
         match (self, request) {
-            (Capability::ShellExec(pattern), Request::ShellExec(cmd)) => {
-                glob_match(pattern, cmd)
-            }
-            (Capability::FileRead(pattern), Request::FileRead(path)) => {
-                glob_match(pattern, path)
-            }
-            (Capability::FileWrite(pattern), Request::FileWrite(path)) => {
-                glob_match(pattern, path)
-            }
+            (Capability::ShellExec(pattern), Request::ShellExec(cmd)) => glob_match(pattern, cmd),
+            (Capability::FileRead(pattern), Request::FileRead(path)) => glob_match(pattern, path),
+            (Capability::FileWrite(pattern), Request::FileWrite(path)) => glob_match(pattern, path),
             _ => false,
         }
     }
